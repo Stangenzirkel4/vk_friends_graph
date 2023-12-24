@@ -80,7 +80,7 @@ def draw_graph():       # Метод для отрисовки графа
         'with_labels': True  # печатать ли заголовки узлов
     }
     # Рисуем граф с помощью функции draw
-    nx.draw_spectral(G, **options)
+    nx.draw(G, **options)
     # вы также можете попробовать использовать следующие варианты
     # nx.draw_circular(G, **options) -
     # nx.draw_shell(G, **options) -
