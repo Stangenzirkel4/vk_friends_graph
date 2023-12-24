@@ -79,9 +79,36 @@ if __name__ == "__main__":
                 mutual_last_name = mutual['last_name']
                 mutual_id = str(mutual['id'])
                 node = '{}/{}/{}:{}/{}/{}:'.format(friend_name, friend_last_name, friend_id, mutual_name,
-                                                   mutual_last_name, mutual_id) + '\n'
+                                                   mutual_last_name, mutual_id) + '{}\n'
                 f.write(node)
         except:
             print('Cant get mutuals of id' + str(person_id), 'with id' + str(friend['id']))
     f.close()
 
+    # Создаем граф, считывая данные о вершинах и ребрах из файла
+    G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
+
+    # Задаем опции для отображения графа
+    options = {
+        'node_color': '#3AEBCA',  # цвет узла
+        'node_size': 3500,  # размер узла
+        'edge_color': '#F0F0F0',  # цвет соединений
+        'font_size': 7,  # размер шрифта
+        'with_labels': True  # печатать ли заголовки узлов
+    }
+    # Рисуем граф с помощью функции draw
+    nx.draw(G, pos=nx.draw_circular(), **options)
+    # параметр pos отвечает за то, как будет отображен граф
+    # вы можете попробовать использовать следующие варианты
+    # nx.draw(G, pos=nx.draw_circular(G), **options) -
+    # nx.draw(G, pos=nx.draw_circular(G), **options) -
+    # nx.draw(G, pos=nx.draw_circular(G), **options) -
+
+    # С помощью метода библиотеки networkx получаем лапласиан графа
+    L = nx.laplacian_matrix(G)
+    L_array = L.toarray()
+
+    # устанавливаем размер изображения в дюймах
+    plt.gcf().set_size_inches(40, 40)
+    # Сохраняем граф в файл
+    plt.savefig('graph.png')
