@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 
 
-def make_gridlist(user_id):     
+def make_gridlist(user_id):     # Метод для получения друзей через vk api и записи их в файл
     if not user_id:
         person = vk.method('users.get')     # Возвращает данные о пользователе, чей логин был введен
         user_id = person[0]['id']
@@ -30,7 +30,7 @@ def make_gridlist(user_id):
     # Получаем информацию о всех друзьях
     friends_info = vk.method('users.get', {'user_ids': ','.join([str(i) for i in friends['items']])})
 
-    # Теперь пишем друзей в файл
+    # Теперь запишем друзей в файл
 
     # Открываем с правами на всё
     f = open('grid.edgelist', 'a', encoding='utf-8')
@@ -66,7 +66,8 @@ def make_gridlist(user_id):
             print('Cant get mutuals of id' + str(person_id), 'with id' + str(friend['id']))
     f.close()
 
-def draw_graph():
+
+def draw_graph():       # Метод для отрисовки графа
     # Создаем граф, считывая данные о вершинах и ребрах из файла
     G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
 
@@ -91,18 +92,23 @@ def draw_graph():
     # Сохраняем граф в файл
     plt.savefig('graph.png')
 
-def get_laplacian():
 
+def get_laplacian():    # Метод для получения лапласиана графа
+    # Создаем граф, считывая данные о вершинах и ребрах из файла
     G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
 
     # С помощью метода библиотеки networkx получаем лапласиан графа
     L = nx.laplacian_matrix(G)
+
+    # Переводим в numpy array
     L_array = L.toarray()
+    # Здесь настроена запись в файл, настраивайте под себя
+    # Сейчас сделана под формат чтения матриц matlab
     with open('Laplacian.txt', 'w') as f:
         for l in L_array:
             line = ""
             for i in l:
-                line += (str(i)) + "    "
+                line += (str(i)) + ","
             line += "\n"
             f.write(line)
 
@@ -130,8 +136,11 @@ if __name__ == "__main__":
     vk = vk_api.VkApi(login=login, password=password, app_id=2685278)
     vk.auth()
 
-    make_gridlist(user_id)
-    draw_graph()
-    get_laplacian()
+    # Чтобы быстрее работало, можно закомментить make_gridlist после первого запуска
+    make_gridlist(user_id)      # Метод для получения друзей через vk api и записи их в файл
+    draw_graph()                # Метод для отрисовки графа
+    get_laplacian()             # Метод для получения лапласиана графа
 
-
+    # Многое из того, что использовано, бралось отсюда
+    # https://github.com/Jumas-Cola/simple_vk_friends_graph
+    # По ссылке выше реализован более глубокий обход графа (друзья друзей и т.д) и несколько других фич
