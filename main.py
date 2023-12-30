@@ -1,6 +1,7 @@
 import itertools
 
 import networkx as nx
+import vk
 import vk_api
 import os
 import matplotlib.pyplot as plt
@@ -12,6 +13,7 @@ options = {
     'font_size': 7,  # размер шрифта
     'with_labels': True  # печатать ли заголовки узлов
 }
+
 
 
 def make_gridlist(user_id):  # Метод для получения друзей через vk api и записи их в файл
@@ -95,31 +97,55 @@ def draw_standart_graph():  # Метод для отрисовки станда�
     plt.savefig('graph.png')
 
 
-def draw_label_propagation_graph():  # Метод для отрисовки графа, используя кластеризацию "Label Propagation"
+def draw_louvain_graph():
+    def show_graph(graph): # Вывод вершин и их кластеров
+        node_cluster_map = nx.get_node_attributes(clustered_graph, 'cluster')
+        for node, cluster in node_cluster_map.items():
+            print(f"Вершина {node} в кластере {cluster}")
+
     G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
+    # Выполнение кластеризации методом Лувейна
+    communities = nx.community.greedy_modularity_communities(G)
 
-    # Определяем сообщества в графе
-    comp = list(nx.community.label_propagation_communities(G))
-
-    cluster_dict = {}
-    for idx, community in enumerate(comp):
-        for node in community:
-            cluster_dict[node] = idx
-
-    # Создаем копию графа и присваиваем кластеры узлам
-    clustered_graph = G.copy()
-    for node in clustered_graph.nodes():
-        clustered_graph.nodes[node]['cluster'] = cluster_dict.get(node)
-
+    # Преобразование результата в словарь, где ключи - вершины, значения - номера кластеров
+    clustered_graph = nx.Graph()
+    cluster_id = 0
+    for cluster in communities:
+        for node in cluster:
+            clustered_graph.add_node(node, cluster=cluster_id)
+        cluster_id += 1
+    for u, v in G.edges():
+        if u in clustered_graph.nodes() and v in clustered_graph.nodes():
+            clustered_graph.add_edge(u, v)
+    show_graph(clustered_graph)
+    # Рисование и сохранение кластеризованного графа
     nx.draw(clustered_graph, **options)
     plt.gcf().set_size_inches(30, 30)
-    plt.savefig('lp_graph.png')
+    plt.savefig('louvain_graph.png')
 
 
-def draw_girvan_newman_graph():  # Метод для отрисовки графа, используя кластеризацию "Girvan-Newman"
+def draw_girvan_newman_graph(): # Метод для отрисовки графа, используя кластеризацию "Girvan-Newman"
+    def show_clusters(comp, k):
+        clusters1 = []
+        for communities in itertools.islice(comp, k-1):
+            clusters1 = list(communities)
+
+        # Формирование списка, показывающего кластеры для каждой вершины
+        node_clusters = {}
+        for i, cluster1 in enumerate(clusters1):
+            for node in cluster1:
+                node_clusters[node] = i
+
+        for i in range(5):
+            print("people from " + str(i + 1) + " cluster")
+            nodes = [key for key, value in node_clusters.items() if value == i]
+            print(nodes)
+
     G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
     comp = nx.community.girvan_newman(G)
     k = 5  # Количество кластеров
+    show_clusters(comp, k)
+
 
     # Определяем сообщества в графе
     limited = tuple(sorted(c) for c in next(itertools.islice(comp, k - 1)))
@@ -129,10 +155,10 @@ def draw_girvan_newman_graph():  # Метод для отрисовки граф
     clustered_graph = G.copy()
     for node in clustered_graph.nodes():
         clustered_graph.nodes[node]['cluster'] = clusters.get(node)
-
     nx.draw(clustered_graph, **options)
     plt.gcf().set_size_inches(30, 30)
     plt.savefig('gnm_graph.png')
+    return comp
 
 
 def get_laplacian():  # Метод для получения лапласиана графа
@@ -182,9 +208,9 @@ if __name__ == "__main__":
     make_gridlist(user_id)
 
     # Блок отрисовок графа
-    draw_girvan_newman_graph()
-    draw_standart_graph()
-    draw_label_propagation_graph()
+    #draw_standart_graph()
+    draw_louvain_graph()
+    #draw_girvan_newman_graph()
 
     # Метод для получения лапласиана графа
     get_laplacian()
