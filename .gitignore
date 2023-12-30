@@ -4,3 +4,5 @@ vk_config.v2.json
 grid.edgelist
 graph.png
 Laplacian.txt
+girvan_newman.txt
+louvain.txt
