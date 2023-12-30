@@ -1,12 +1,22 @@
+import itertools
+
 import networkx as nx
 import vk_api
 import os
 import matplotlib.pyplot as plt
 
+options = {
+    'node_color': '#3AEBCA',  # цвет узла
+    'node_size': 3500,  # размер узла
+    'edge_color': '#F0F0F0',  # цвет соединений
+    'font_size': 7,  # размер шрифта
+    'with_labels': True  # печатать ли заголовки узлов
+}
 
-def make_gridlist(user_id):     # Метод для получения друзей через vk api и записи их в файл
+
+def make_gridlist(user_id):  # Метод для получения друзей через vk api и записи их в файл
     if not user_id:
-        person = vk.method('users.get')     # Возвращает данные о пользователе, чей логин был введен
+        person = vk.method('users.get')  # Возвращает данные о пользователе, чей логин был введен
         user_id = person[0]['id']
     else:
         person = vk.method('users.get', {'user_ids': user_id})  # Возвращает человека по его id
@@ -67,18 +77,10 @@ def make_gridlist(user_id):     # Метод для получения друз�
     f.close()
 
 
-def draw_graph():       # Метод для отрисовки графа
+def draw_standart_graph():  # Метод для отрисовки стандартного графа
     # Создаем граф, считывая данные о вершинах и ребрах из файла
     G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
 
-    # Задаем опции для отображения графа
-    options = {
-        'node_color': '#3AEBCA',  # цвет узла
-        'node_size': 3500,  # размер узла
-        'edge_color': '#F0F0F0',  # цвет соединений
-        'font_size': 7,  # размер шрифта
-        'with_labels': True  # печатать ли заголовки узлов
-    }
     # Рисуем граф с помощью функции draw
     nx.draw(G, **options)
     # вы также можете попробовать использовать следующие варианты
@@ -88,12 +90,52 @@ def draw_graph():       # Метод для отрисовки графа
     # nx.draw_spectral(G, **options) -
 
     # устанавливаем размер изображения в дюймах
-    plt.gcf().set_size_inches(40, 40)
+    plt.gcf().set_size_inches(30, 30)
     # Сохраняем граф в файл
     plt.savefig('graph.png')
 
 
-def get_laplacian():    # Метод для получения лапласиана графа
+def draw_label_propagation_graph():  # Метод для отрисовки графа, используя кластеризацию "Label Propagation"
+    G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
+
+    # Определяем сообщества в графе
+    comp = list(nx.community.label_propagation_communities(G))
+
+    cluster_dict = {}
+    for idx, community in enumerate(comp):
+        for node in community:
+            cluster_dict[node] = idx
+
+    # Создаем копию графа и присваиваем кластеры узлам
+    clustered_graph = G.copy()
+    for node in clustered_graph.nodes():
+        clustered_graph.nodes[node]['cluster'] = cluster_dict.get(node)
+
+    nx.draw(clustered_graph, **options)
+    plt.gcf().set_size_inches(30, 30)
+    plt.savefig('lp_graph.png')
+
+
+def draw_girvan_newman_graph():  # Метод для отрисовки графа, используя кластеризацию "Girvan-Newman"
+    G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
+    comp = nx.community.girvan_newman(G)
+    k = 5  # Количество кластеров
+
+    # Определяем сообщества в графе
+    limited = tuple(sorted(c) for c in next(itertools.islice(comp, k - 1)))
+    clusters = {node: cid for cid, cluster in enumerate(limited) for node in cluster}
+
+    # Создаем копию графа и присваиваем кластеры узлам
+    clustered_graph = G.copy()
+    for node in clustered_graph.nodes():
+        clustered_graph.nodes[node]['cluster'] = clusters.get(node)
+
+    nx.draw(clustered_graph, **options)
+    plt.gcf().set_size_inches(30, 30)
+    plt.savefig('gnm_graph.png')
+
+
+def get_laplacian():  # Метод для получения лапласиана графа
     # Создаем граф, считывая данные о вершинах и ребрах из файла
     G = nx.read_edgelist(path="grid.edgelist", delimiter=":")
 
@@ -114,18 +156,18 @@ def get_laplacian():    # Метод для получения лапласиа�
 
 
 if __name__ == "__main__":
-    # Удаляет данные от предыдущего запуска
+    # Очистка данных от предыдущего запуска
     try:
         os.remove("grid.edgelist")
     except:
         print("Nothing to delete")
 
-    # Нужно, чтобы не удалять пароль при каждом коммите
+    # Использование авторизационных данных из файла
     with open('pas.txt') as f:
         temp = f.read().splitlines()
-        login = temp[0]       # Логин и пароль для входа
+        login = temp[0]  # Логин и пароль для входа
         password = temp[1]
-        user_id = temp[2]         # id человека, чьих друзей мы ищем
+        user_id = temp[2]  # id человека, чьих друзей мы ищем
 
     # Вы можете записать логин и пароль в файл 'pas.txt' или просто присвоить переменным значения
     # login = '123123'
@@ -136,10 +178,16 @@ if __name__ == "__main__":
     vk = vk_api.VkApi(login=login, password=password, app_id=2685278)
     vk.auth()
 
-    # Чтобы быстрее работало, можно закомментить make_gridlist после первого запуска
-    make_gridlist(user_id)      # Метод для получения друзей через vk api и записи их в файл
-    draw_graph()                # Метод для отрисовки графа
-    get_laplacian()             # Метод для получения лапласиана графа
+    # Метод для получения друзей через vk api и записи их в файл
+    make_gridlist(user_id)
+
+    # Блок отрисовок графа
+    draw_girvan_newman_graph()
+    draw_standart_graph()
+    draw_label_propagation_graph()
+
+    # Метод для получения лапласиана графа
+    get_laplacian()
 
     # Многое из того, что использовано, бралось отсюда
     # https://github.com/Jumas-Cola/simple_vk_friends_graph
