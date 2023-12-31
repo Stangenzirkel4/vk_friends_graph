@@ -6,3 +6,4 @@ graph.png
 Laplacian.txt
 girvan_newman.txt
 louvain.txt
+label_propagation.txt
